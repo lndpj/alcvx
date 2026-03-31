@@ -95,7 +95,7 @@ typedef vecf_t         vec_t;
 #ifdef __clang__
 #define vec_ext(T,N) typeof(T __attribute__((ext_vector_type(N))))
 #else
-#define vec_ext(T,N) typeof(T __attribute__((vector_size(bitceil((alignof(T) * N)))))
+#define vec_ext(T,N) typeof(T __attribute__((vector_size(bitceil((alignof(T) * N))))))
 #endif
 #endif
 #pragma pack(pop)
