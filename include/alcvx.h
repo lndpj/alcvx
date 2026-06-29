@@ -53,10 +53,16 @@ typedef vecf_t         vec_t;
  * Compiler dependent common defines                   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #if defined(_MSC_VER)
+#if !defined(__cplusplus)
+#define inline __inline
+#endif
 #define ALIGN(x) __declspec(align(x))
-#define INLINE __inline __force_inline __flatten __declspec(nothrow)
+#define INLINE inline __force_inline __flatten __declspec(nothrow)
 #define CONST __declspec(noalias)
 #else
+#if !defined(inline)
+#define inline __inline__
+#endif
 #define ALIGN(x) __attribute__((aligned(x)))
 #define INLINE inline __attribute__((always_inline,flatten,nothrow))
 #define CONST __attribute__((const))
