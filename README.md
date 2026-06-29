@@ -3,10 +3,12 @@ Aligned C Vector Extension single-header math library
 
 ## Status
 
+### Types
 - [x] scalar types
 - [x] vec(n,t)
 - [x] arr(n,t)
 
+### Macros
 - [x] countargs
 - [x] emptyargs
 - [x] isrray
