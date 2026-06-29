@@ -3,21 +3,36 @@ Aligned C Vector Extension single-header math library
 
 ## Status
 
-### DONE
-- integral scalar types i.e. f32, f64, b8, u8, s8, i8, c8
-- arbitrary length arr(n,t) and vec(n,t) power of two types and ALCVX load/cast
-- bitceil, isarray, countof, countargs, emptyargs, perm
-- OpenMP SIMD linear dot product and sum
-- vec(n,t) cross3 product using perm3
-- bitceil replacement for stdc_bit_ceil
+- [x] scalar types
+- [x] vec(n,t)
+- [x] arr(n,t)
+
+- [x] countargs
+- [x] emptyargs
+- [x] isrray
+- [ ] isvector
+- [x] bitceil
+- [x] vout
+- [x] vperm
+- [x] vwfillperm
+- [x] vred
+- [x] vdot
+- [x] vlen
+- [x] vcross3
+- [x] vcross2
+- [x] vset
+- [x] vdup
+- [ ] vhat
+- [ ] vvee
+- [ ] vhodge
+- [ ] mdet
+- [ ] vlaplace
+- [ ] levicivita
 
 ### TODO
 - array initializer list duplicate for copy assign for types of arbitrary
   length based on [HolyBlackCat/macro_sequence_for](https://github.com/HolyBlackCat/macro_sequence_for)
 - emulated recursion iteration based on `__COUNTER__` for integer sequence
-- determinant, laplace expansion and cross4 
-- levi-civita symbol
-- generic n-dim hodge star operator
 - motor/rotor/quat and oct/sed/ten types
 
 ```c
