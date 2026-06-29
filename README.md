@@ -5,13 +5,13 @@ Aligned C Vector Extension single-header math library
 
 ### DONE
 - integral scalar types i.e. f32, f64, b8, u8, s8, i8, c8
-- arbitrary length vec(t,n) and vec_ext(t,n) power of two types and ALCVX load/cast
+- arbitrary length arr(n,t) and vec(n,t) power of two types and ALCVX load/cast
 - bitceil, isarray, countof, countargs, emptyargs, perm
 - OpenMP SIMD linear dot product and sum
-- vec(t,n) cross3 product using perm3
+- vec(n,t) cross3 product using perm3
+- bitceil replacement for stdc_bit_ceil
 
 ### TODO
-- use bit_ceil and align modes
 - array initializer list duplicate for copy assign for types of arbitrary
   length based on [HolyBlackCat/macro_sequence_for](https://github.com/HolyBlackCat/macro_sequence_for)
 - emulated recursion iteration based on `__COUNTER__` for integer sequence
@@ -21,8 +21,8 @@ Aligned C Vector Extension single-header math library
 - motor/rotor/quat and oct/sed/ten types
 
 ```c
-vec(f32,3) a = {4,2,0};
-vec(f32,3) b = dup(a);
+vec(3,f32) a = {4,2,0};
+vec(3,f32) b = dup(a);
 ```
 
 ## Usage
@@ -34,8 +34,8 @@ vec(f32,3) b = dup(a);
 
 int main(int argc, char** argv)
 {
-     vec(u16,3) src[2] = { {1,2,3}, {4,5,6} };
-     vec(u16,3) dst;
+     vec(3,u16) src[2] = { {1,2,3}, {4,5,6} };
+     vec(3,u16) dst;
      dup_ext(dst,src[0]);
      printf("%hu %hu %hu %hu\n", dst[0],dst[1],dst[2],dst[3]);
 

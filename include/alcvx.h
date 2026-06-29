@@ -1,15 +1,18 @@
 #pragma once
+#include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <inttypes.h>
 #include <stdalign.h>
-#include <sys/param.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
 
-/* * * * * * * * * * * * *
- * standard scalar types *
- * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * standard scalar types                               *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 typedef float    f32;
 typedef double   f64;
 
@@ -46,163 +49,184 @@ typedef float          vecf_t;
 typedef double         vecd_t;
 typedef vecf_t         vec_t;
 
-/* * * * * * * * * * * * * *
- *   expand for permute    *
- * * * * * * * * * * * * * */
-#define PARENS ()
-#define EXPAND(...) EXPAND4(EXPAND4(EXPAND4(EXPAND4(__VA_ARGS__))))
-#define EXPAND4(...) EXPAND3(EXPAND3(EXPAND3(EXPAND3(__VA_ARGS__))))
-#define EXPAND3(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
-#define EXPAND2(...) EXPAND1(EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__))))
-#define EXPAND1(...) __VA_ARGS__
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Compiler dependent common defines                   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#if defined(_MSC_VER)
+#define ALIGN(x) __declspec(align(x))
+#define INLINE __inline __force_inline __flatten __declspec(nothrow)
+#define CONST __declspec(noalias)
+#else
+#define ALIGN(x) __attribute__((aligned(x)))
+#define INLINE inline __attribute__((always_inline,flatten,nothrow))
+#define CONST __attribute__((const))
+#endif
 
-/* * * * * * * * * * * * * *
- * bitceil for pow 2 align *
- * * * * * * * * * * * * * */
-#define BITOP_RUP01__(x) (             (x) | (             (x) >>  1))
-#define BITOP_RUP02__(x) (BITOP_RUP01__(x) | (BITOP_RUP01__(x) >>  2))
-#define BITOP_RUP04__(x) (BITOP_RUP02__(x) | (BITOP_RUP02__(x) >>  4))
-#define BITOP_RUP08__(x) (BITOP_RUP04__(x) | (BITOP_RUP04__(x) >>  8))
-#define BITOP_RUP16__(x) (BITOP_RUP08__(x) | (BITOP_RUP08__(x) >> 16))
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * bitceil replacement for stdc_bit_ceil               *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define sh0(x) (__uint128_t)(   (x) | (   (x) >> (1 << 0)))
+#define sh1(x) (__uint128_t)(sh0(x) | (sh0(x) >> (1 << 1)))
+#define sh2(x) (__uint128_t)(sh1(x) | (sh1(x) >> (1 << 2)))
+#define sh3(x) (__uint128_t)(sh2(x) | (sh2(x) >> (1 << 3)))
+#define sh4(x) (__uint128_t)(sh3(x) | (sh3(x) >> (1 << 4)))
+#define sh5(x) (__uint128_t)(sh4(x) | (sh4(x) >> (1 << 5)))
+#define sh6(x) (__uint128_t)(sh5(x) | (sh5(x) >> (1 << 6)))
+#define bitceil(x) (const __typeof__(x))(sh6(((__uint128_t)(x)) - 1) + 1)
 
-#define bitceil(x) (const uint32_t)(BITOP_RUP16__(((uint32_t)(x)) - 1) + 1)
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * preprocessor macro variable argument count          *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define countargs(...) (0 __VA_OPT__(+sizeof((__typeof__(__VA_ARGS__)[]){__VA_ARGS__})/sizeof(__VA_ARGS__)))
+#define emptyargs(...) (true __VA_OPT__(-1))
 
-/* define array verification and element count */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * array verification and element count                *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define isarray(a  ) __builtin_choose_expr(__builtin_types_compatible_p(typeof((a)[0]) [], typeof((a))), true, false)
 #undef  countof
 #define countof(a  ) (sizeof((a))/sizeof((a)[0]))
 
-/* define variable argument macros */
-#define countargs(...) (0 __VA_OPT__(+sizeof((typeof(__VA_ARGS__)[]){__VA_ARGS__})/sizeof(__VA_ARGS__)))
-#define emptyargs(...) (true __VA_OPT__(-1))
-
-/* add permute */
-#define perm(a,...)          { __VA_OPT__(EXPAND(perm_helper(a,__VA_ARGS__))) }
-#define perm_helper(a,i,...) (a)[i], __VA_OPT__(perm_again PARENS (a,__VA_ARGS__))
-#define perm_again()         perm_helper
-
-#pragma pack(push,1)
-/* define different array types */
-#define     arr(T,N) typeof(T[N]) /* fixed static array of arbitrary length and type */
-#pragma pack(pop)
-#pragma pack(push,1)
-#define     vla(T  ) typeof(T[ ]) /* variable length array - VLA */
-#pragma pack(pop)
-
-#pragma pack(push,1)
-/* define vector extension power of 2 sized SIMD vector types for non MSVC */
-#ifndef _MSC_VER
-#ifdef __clang__
-#define vec_ext(T,N) typeof(T __attribute__((ext_vector_type(N))))
-#else
-#define vec_ext(T,N) typeof(T __attribute__((vector_size(bitceil((alignof(T) * N))))))
-#endif
-#endif
-#pragma pack(pop)
-
-#ifndef vec
-#define vec(T,N) arr(T,N)
-#endif
-
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * cast conversions                                    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define ALCVX(src,n) (*(vec(typeof(src[0]),n)*)src)
 
-/* * * * * * * * * * * * * * *
- *     sum using OpenMP      *
- * * * * * * * * * * * * * * */
-#define sum(a,n,i) \
-({ \
-typeof((a)[0]) _dst = i; \
-_Pragma("omp simd reduction(+:_dst)") \
-for(size_t j = 0; j < MIN(countof(a),n); j++) \
-        _dst += (a)[j]; \
-_dst; \
-})
-
-/* * * * * * * * * * * * * * *
- *     dot using OpenMP      *
- * * * * * * * * * * * * * * */
-#define dot(a,b,n,i) \
-({ \
-typeof((a)[0]) _dst = i; \
-_Pragma("omp simd reduction(+:_dst)") \
-for(size_t j = 0; j < MIN(MIN(countof(a),countof(b)),n); j++) \
-        _dst += (a)[j] * (b)[j]; \
-_dst; \
-})
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * 
- *       duplicate/copy array/vector types using       *
- *       the aligned to power of 2 padded vec_ext      *
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * n-dim static array type (aligned if n == bitceil(n) *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define dup(_dst,src) ({ \
-_Pragma("omp simd") \
-for(size_t j = 0; j < MIN(countof(src),countof(_dst)); j++) \
-(_dst)[j] = (src)[j]; \
-(*((vec_ext(typeof((_dst)[0]),countof(_dst))*)&(_dst)[0])); \
+#define arr(n,t) ALIGN((n == bitceil(n) ? n : 1) * __alignof__(t)) __typeof__(__typeof__(t)[n])
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * n-dim simd extension vector type (n == bitceil(n))  *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#if defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
+#define vec(n,t) __typeof__(__attribute__((vector_size(bitceil(n) * __alignof__(__typeof__(t))))) __typeof__(t))
+#else
+#if defined(__clang__)
+#define vec(n,t) __typeof__(__attribute__((ext_vector_type(bitceil(n)))) __typeof__(t))
+#else
+#define vec(n,t) arr(n,t)
+#endif
+#endif
+
+typedef vec(2,vec_t) vec2_t;
+typedef vec(3,vec_t) vec3_t;
+typedef vec(4,vec_t) vec4_t;
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * array/vector terminal output function               *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define eout() puts("")
+#define sout(_pre,_s,_post) printf("%s%+e%s",(_pre),(double)(_s),(_post))
+#define vout(_pre, _v, _post, _n, _align) \
+({ \
+ 	printf("%s[",_pre); \
+	 _Pragma("omp simd") \
+	 for(size_t i = 0; i < _n; i++) \
+	printf("%+e%s", (double)(_v)[i], i == (_n - 1) ? "]" : " "); \
+	printf("%s",_post); \
+	if((bool)_align) \
+	printf(": %4zu/%4zu", __alignof__((_v)), sizeof((_v))); \
+})
+
+/* vector duplicate */
+#define vdup(_n,_dst,_src) \
+({ \
+	_Pragma("omp simd") \
+	for(size_t i = 0; i < _n; i++) \
+	(_dst)[i] = (__typeof__((_dst)[0]))(_src)[i]; \
+})
+
+/* vector set */
+#define vset(_v,...) \
+({ \
+	static_assert(!emptyargs(__VA_ARGS__)); \
+	constexpr size_t _n = countargs(__VA_ARGS__); \
+	__typeof__(__VA_ARGS__)* args = (__typeof__(__VA_ARGS__)[]){__VA_ARGS__}; \
+	vdup(_n,_v,args); \
+	(_v); \
+})
+
+/* vector permute */
+#define vperm(_v,...) \
+({ \
+	static_assert(!emptyargs(__VA_ARGS__)); \
+	constexpr size_t _n = countargs(__VA_ARGS__); \
+	__typeof__(__VA_ARGS__)* args = (__typeof__(__VA_ARGS__)[]){__VA_ARGS__}; \
+	vec(_n,__typeof__((_v)[0])) _dst; \
+	_Pragma("omp simd") \
+	for(size_t i = 0; i < _n; i++) \
+		(_dst)[i] = (_v)[(size_t)(args)[i]]; \
+	(_dst); \
+})
+
+/* permute v and pad fill bit ceiled rest with w */
+#define vwfillperm(_w,_v,...) \
+({ \
+	static_assert(!emptyargs(__VA_ARGS__)); \
+	constexpr size_t _n = countargs(__VA_ARGS__); \
+	__typeof__(__VA_ARGS__)* args = (__typeof__(__VA_ARGS__)[]){__VA_ARGS__}; \
+	vec(_n + 1,__typeof__((_v)[0])) _dst; \
+	_Pragma("omp simd") \
+	for(size_t i = 0; i < _n; i++) \
+		(_dst)[i] = (_v)[(size_t)(args)[i]]; \
+	_Pragma("omp simd") \
+	for(size_t i = _n; i < bitceil(_n+1); i++) \
+		(_dst)[i] = (__typeof__((_dst)[0]))_w; \
+	(_dst); \
+})
+
+/* vector accumulate sum */
+#define  vsum(_n,_src,_t,_i) \
+({ \
+	_t _dst = (_t)_i; \
+	_Pragma("omp simd reduction(+:_dst)") \
+	for(size_t _j = 0; _j < _n; _j++) \
+		_dst += (_t)(_src)[_j]; \
+	_dst; \
 })
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * TODO: Implement indexed sequence for arbitrary n    *
  *                                                     *
- * https://github.com/HolyBlackCat/macro_sequence_for  *
+ *            reduction based vector products          *
  *                                                     *
- * duplicate array using initializer list and          * 
- * make indexed sequence unrolling for loop based on   *
- * boilerplates.                                       *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define dup (a) { (a)[0]...(a)[countof(a)-1]                                     }
+#define vred(_n,_a,_b,_op,_t,_i) \
+({ \
+	_t _dst = (_t)_i; \
+	_Pragma("omp simd reduction(+:_dst)") \
+	for(size_t i = 0; i < _n; i++) \
+		_dst += (_t)(_a)[i] _op (_b)[i]; \
+	_dst; \
+})
 
-/* define 2 to 8-dimensional vector operations */
-#define dup2(a) { (a)[0], (a)[1]                                                 }
-#define dup3(a) { (a)[0], (a)[1], (a)[2]                                         }
-#define dup4(a) { (a)[0], (a)[1], (a)[2], (a)[3]                                 }
-#define dup5(a) { (a)[0], (a)[1], (a)[2], (a)[3], (a)[4]                         }
-#define dup6(a) { (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]                 }
-#define dup7(a) { (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6]         }
-#define dup8(a) { (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7] }
+/* vector dot product */
+#define vdot(_n,_a,_b,_t,_i) vred(_n,_a,_b,*,_t,_i)
+#define vdot3(_a,_b) vdot(3,_a,_b,__typeof__((_a)[0] * (_b)[0]),0)
+#define vdot4(_a,_b) vdot(4,_a,_b,__typeof__((_a)[0] * (_b)[0]),0)
 
-#define perm2(a,x,y    ) (vec_ext(typeof((a)[0]),2))perm((a),x,y    )
-#define perm3(a,x,y,z  ) (vec_ext(typeof((a)[0]),3))perm((a),x,y,z  )
-#define perm4(a,x,y,z,w) (vec_ext(typeof((a)[0]),4))perm((a),x,y,z,w)
-
-#define sum2(a)           sum((a),2,0)
-#define sum3(a)           sum((a),3,0)
-#define sum4(a)           sum((a),4,0)
-
-#define dot2(a,b)         dot((a),(b),2,0)
-#define dot3(a,b)         dot((a),(b),3,0)
-#define dot4(a,b)         dot((a),(b),4,0)
+/* vector length */
+#define vlen(_n,_v,_squared) _squared ? (double)vred(_n,_v,_v,*,double,0) : (double)sqrt(vred(_n,_v,_v,*,double,0))
+#define vlen3(_v,_squared) vlen(3,_v,_squared)
+#define vlen4(_v,_squared) vlen(3,_v,_squared)
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *                                                     *
- *              cross/hodge vector products            *
+ *              cross vector products                  *
  *                                                     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define cross2(a,d) ((d & 0x1) ? -1 : 1) * perm2(a,1,0)
+#define vcross3(_a,_b) (vwfillperm(0,_a,1,2,0) * vwfillperm(0,_b,2,0,1)) - (vwfillperm(0,_a,2,0,1) * vwfillperm(0,_b,1,2,0))
+#define vcross2(_a,_d) ((_d & 0x1) ? -1 : 1) * vperm(_a,1,0)
 
-/* cross3 - 3-dimensional vector product for vector extension types only
- * TODO:
- * - support vector/array types without operators
- * - n-dimensional hodge star operator vector product based on
- *   levi-civita, laplace expansion and determinant as a
- *   left contraction grade projection operator. See Clifford, Hodge, 
- */
-#define cross3(a,b) \
-  perm3(a,1,2,0) * perm3(b,2,0,1) \
-- perm3(a,2,1,0) * perm3(b,1,2,0)
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *                                                     *
+ *               hat/vee/hodge operators               *
+ *                                                     *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 /*
-#define minor(x,y,...) ({ \
-vec(typeof(__VA_ARGS__), countargs(__VA_ARGS__)-1) dst[countargs(__VA_ARGS__)-1]; \
-for(size_t i = 0; i < countargs(__VA_ARGS__)-1; i++) \
-	for(size_t j = 0; j < countargs(__VA_ARGS__)-1; j++) \
-		dst[i][j] = (i <  x && j <  y) ? (vec(typeof(__VA_ARGS__),countargs(__VA_ARGS__))[countargs(__VA_ARGS__)]){__VA_ARGS__}[i  ][j  ] : \
- 	                    (i >= x && j <  y) ? (vec(typeof(__VA_ARGS__),countargs(__VA_ARGS__))[countargs(__VA_ARGS__)]){__VA_ARGS__}[i+1][j  ] : \
-	                    (i <  x && j >= y) ? (vec(typeof(__VA_ARGS__),countargs(__VA_ARGS__))[countargs(__VA_ARGS__)]){__VA_ARGS__}[i  ][j+1] : \
-		                                 COUNTO(vec(typeof(__VA_ARGS__),countargs(__VA_ARGS__))[countargs(__VA_ARGS__)]){__VA_ARGS__}[i+1][j+1]; \
-dst; })
-
 #define cross4(a,b,c) (vec(typeof((a)[0]),4))\
 { det(perm3(a,1,2,3), perm3(b,1,2,3), perm3(c,1,2,3)), \
  -det(perm3(a,0,2,3), perm3(b,0,2,3), perm3(c,0,2,3)), \
