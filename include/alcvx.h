@@ -65,14 +65,13 @@ typedef vecf_t         vec_t;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * bitceil replacement for stdc_bit_ceil               *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define sh0(x) (__uint128_t)(   (x) | (   (x) >> (1 << 0)))
-#define sh1(x) (__uint128_t)(sh0(x) | (sh0(x) >> (1 << 1)))
-#define sh2(x) (__uint128_t)(sh1(x) | (sh1(x) >> (1 << 2)))
-#define sh3(x) (__uint128_t)(sh2(x) | (sh2(x) >> (1 << 3)))
-#define sh4(x) (__uint128_t)(sh3(x) | (sh3(x) >> (1 << 4)))
-#define sh5(x) (__uint128_t)(sh4(x) | (sh4(x) >> (1 << 5)))
-#define sh6(x) (__uint128_t)(sh5(x) | (sh5(x) >> (1 << 6)))
-#define bitceil(x) (const __typeof__(x))(sh6(((__uint128_t)(x)) - 1) + 1)
+#define sh0(x) (uintmax_t)(   (x) | (   (x) >> (1 << 0)))
+#define sh1(x) (uintmax_t)(sh0(x) | (sh0(x) >> (1 << 1)))
+#define sh2(x) (uintmax_t)(sh1(x) | (sh1(x) >> (1 << 2)))
+#define sh3(x) (uintmax_t)(sh2(x) | (sh2(x) >> (1 << 3)))
+#define sh4(x) (uintmax_t)(sh3(x) | (sh3(x) >> (1 << 4)))
+#define sh5(x) (uintmax_t)(sh4(x) | (sh4(x) >> (1 << 5)))
+#define bitceil(x) (const __typeof__(x))(sh5(((uintmax_t)(x)) - 1) + 1)
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * preprocessor macro variable argument count          *

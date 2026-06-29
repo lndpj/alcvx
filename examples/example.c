@@ -8,6 +8,7 @@ int main(int argc, char** argv)
 	vout("",a,"",4,true); eout();
 	vout("",b,"",4,true); eout();
 	vout("",c,"",4,true); eout();
+
 	exit(EXIT_SUCCESS);
 }
 
